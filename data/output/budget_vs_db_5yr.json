@@ -1,0 +1,182 @@
+{
+  "generated": "2026-04-17",
+  "note": "航空管制調達DB FY2020-2024 5年分予算比較",
+  "units": "億円",
+  "coverage_note": "DB実績(contracts+PAS) / 調達母数 = 網羅率",
+  "fiscal_years": {
+    "2020": {
+      "fy": 2020,
+      "reiwa_year": 2,
+      "budget": {
+        "total_expenditure_oku": 3922,
+        "personnel_oku": 800,
+        "borrowing_repayment_oku": 300,
+        "misc_non_procurement_oku": 670,
+        "procurement_base_oku": 2152,
+        "source_note": "R2 空港整備勘定（推計）"
+      },
+      "db": {
+        "contracts": {
+          "total_count": 1366,
+          "total_oku": 963.58,
+          "by_source": {
+            "honkyoku": 0,
+            "tcab": 258.06,
+            "wcab": 23.87
+          }
+        },
+        "pas_airport": {
+          "total_count": 394,
+          "total_oku": 1184.83
+        },
+        "combined_count": 1760,
+        "combined_oku": 2148.41
+      },
+      "coverage": {
+        "db_oku": 2148.41,
+        "procurement_base_oku": 2152,
+        "coverage_pct": 99.8
+      }
+    },
+    "2021": {
+      "fy": 2021,
+      "reiwa_year": 3,
+      "budget": {
+        "total_expenditure_oku": 3938,
+        "personnel_oku": 810,
+        "borrowing_repayment_oku": 312,
+        "misc_non_procurement_oku": 670,
+        "procurement_base_oku": 2146,
+        "source_note": "R3 空港整備勘定（推計）"
+      },
+      "db": {
+        "contracts": {
+          "total_count": 1996,
+          "total_oku": 1241.91,
+          "by_source": {
+            "honkyoku": 0.02,
+            "tcab": 172.37,
+            "wcab": 315.73
+          }
+        },
+        "pas_airport": {
+          "total_count": 489,
+          "total_oku": 1641.62
+        },
+        "combined_count": 2485,
+        "combined_oku": 2883.53
+      },
+      "coverage": {
+        "db_oku": 2883.53,
+        "procurement_base_oku": 2146,
+        "coverage_pct": 134.4
+      }
+    },
+    "2022": {
+      "fy": 2022,
+      "reiwa_year": 4,
+      "budget": {
+        "total_expenditure_oku": 3942,
+        "personnel_oku": 815,
+        "borrowing_repayment_oku": 320,
+        "misc_non_procurement_oku": 670,
+        "procurement_base_oku": 2137,
+        "source_note": "R4 空港整備勘定（確定）"
+      },
+      "db": {
+        "contracts": {
+          "total_count": 1997,
+          "total_oku": 1204.98,
+          "by_source": {
+            "honkyoku": 481.38,
+            "tcab": 355.99,
+            "wcab": 367.61
+          }
+        },
+        "pas_airport": {
+          "total_count": 380,
+          "total_oku": 1592.92
+        },
+        "combined_count": 2377,
+        "combined_oku": 2797.9
+      },
+      "coverage": {
+        "db_oku": 2797.9,
+        "procurement_base_oku": 2137,
+        "coverage_pct": 130.9
+      }
+    },
+    "2023": {
+      "fy": 2023,
+      "reiwa_year": 5,
+      "budget": {
+        "total_expenditure_oku": 3959,
+        "personnel_oku": 820,
+        "borrowing_repayment_oku": 330,
+        "misc_non_procurement_oku": 662,
+        "procurement_base_oku": 2147,
+        "source_note": "R5 空港整備勘定（確定）"
+      },
+      "db": {
+        "contracts": {
+          "total_count": 1935,
+          "total_oku": 971.86,
+          "by_source": {
+            "honkyoku": 445.26,
+            "tcab": 251.9,
+            "wcab": 274.69
+          }
+        },
+        "pas_airport": {
+          "total_count": 559,
+          "total_oku": 1295.54
+        },
+        "combined_count": 2494,
+        "combined_oku": 2267.4
+      },
+      "coverage": {
+        "db_oku": 2267.4,
+        "procurement_base_oku": 2147,
+        "coverage_pct": 105.6
+      }
+    },
+    "2024": {
+      "fy": 2024,
+      "reiwa_year": 6,
+      "budget": {
+        "total_expenditure_oku": 3959,
+        "personnel_oku": 827,
+        "borrowing_repayment_oku": 427,
+        "misc_non_procurement_oku": 298,
+        "procurement_base_oku": 2407,
+        "source_note": "R6 空港整備勘定（確定）"
+      },
+      "db": {
+        "contracts": {
+          "total_count": 1935,
+          "total_oku": 1189.13,
+          "by_source": {
+            "honkyoku": 529.45,
+            "tcab": 432.8,
+            "wcab": 226.88
+          }
+        },
+        "pas_airport": {
+          "total_count": 418,
+          "total_oku": 796.73
+        },
+        "combined_count": 2353,
+        "combined_oku": 1985.86
+      },
+      "coverage": {
+        "db_oku": 1985.86,
+        "procurement_base_oku": 2407,
+        "coverage_pct": 82.5
+      }
+    }
+  },
+  "summary": {
+    "fy_range": "2020-2024",
+    "avg_coverage_pct": 110.6
+  }
+}
