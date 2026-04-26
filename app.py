@@ -88,6 +88,9 @@ SYSTEM_REFERENCES: dict[str, tuple[str, int | str]] = {
     "TRCS": ("URL", f"{CIDAI_BASE}#No_3-4"),   # 非常用ターミナルレーダー管制装置（ARTS/VCCS言及あり）
     "ACTS": ("URL", f"{CIDAI_BASE}#No_2-5"),   # 飛行場管制訓練システム
     "EVA":  ("URL", f"{CIDAI_BASE}#No_3-5"),   # 非常用管制塔システム
+    "ARTS": ("URL", "https://www.mlit.go.jp/koku/jans/dogu/system.html"),
+    "CRMS": ("URL", "https://www.mlit.go.jp/koku/jans/dogu/system.html"),
+    "FDPS": ("URL", "https://ja.wikipedia.org/wiki/%E9%A3%9B%E8%A1%8C%E8%A8%88%E7%94%BB%E6%83%85%E5%A0%B1%E7%AE%A1%E7%90%86%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0"),
 }
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────
