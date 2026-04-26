@@ -152,9 +152,11 @@ def show_drilldown(df: pd.DataFrame, label: str, max_rows: int = 200):
     }
     cols = {k: v for k, v in DESIRED_COLS.items() if k in df.columns}
     disp = df.sort_values("amount", ascending=False)[list(cols.keys())].head(max_rows).rename(columns=cols)
+    if "金額（円）" in disp.columns:
+        disp = disp.copy()
+        disp["金額（円）"] = disp["金額（円）"].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
     st.markdown(f"**▼ {label} — {len(df):,} 件**（最大{max_rows}行表示）")
-    st.dataframe(disp, use_container_width=True, height=240,
-                 column_config={"金額（円）": st.column_config.NumberColumn(format="%,.0f")})
+    st.dataframe(disp, use_container_width=True, height=240)
 
 
 # ── モーダルダイアログ（Streamlit 1.35+） ────────────────────────────
@@ -184,9 +186,11 @@ if _HAS_DIALOG:
     def show_drilldown_dialog(df: pd.DataFrame, title: str, max_rows: int = 200):
         cols = {k: v for k, v in _DRILLDOWN_COLS.items() if k in df.columns}
         disp = df.sort_values("amount", ascending=False)[list(cols.keys())].head(max_rows).rename(columns=cols)
+        if "金額（円）" in disp.columns:
+            disp = disp.copy()
+            disp["金額（円）"] = disp["金額（円）"].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
         st.subheader(title)
-        st.dataframe(disp, use_container_width=True, height=600,
-                     column_config={"金額（円）": st.column_config.NumberColumn(format="%,.0f")})
+        st.dataframe(disp, use_container_width=True, height=600)
         st.write(f"**{len(df):,}件** / **{df['amount'].sum() / 1e8:,.1f}億円**")
 else:
     def show_drilldown_dialog(df: pd.DataFrame, title: str, max_rows: int = 200):
@@ -1039,9 +1043,10 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             "件名", "ベンダー（名寄せ）", "ベンダー（元）",
             "金額（円）", "契約日",
         ]
-        st.dataframe(show_c, use_container_width=True, height=320,
-                     column_config={"金額（円）": st.column_config.NumberColumn(format="%,.0f")})
         csv_c = show_c.to_csv(index=False, encoding="utf-8-sig")
+        show_c_disp = show_c.copy()
+        show_c_disp["金額（円）"] = show_c_disp["金額（円）"].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
+        st.dataframe(show_c_disp, use_container_width=True, height=320)
         st.download_button(
             "📥 contracts CSV ダウンロード",
             csv_c,
@@ -1062,9 +1067,10 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             "大カテゴリ", "カテゴリ", "エリア", "工種",
             "件名", "ベンダー（名寄せ）", "落札額（円）", "落札日",
         ]
-        st.dataframe(show_p, use_container_width=True, height=320,
-                     column_config={"落札額（円）": st.column_config.NumberColumn(format="%,.0f")})
         csv_p = show_p.to_csv(index=False, encoding="utf-8-sig")
+        show_p_disp = show_p.copy()
+        show_p_disp["落札額（円）"] = show_p_disp["落札額（円）"].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
+        st.dataframe(show_p_disp, use_container_width=True, height=320)
         st.download_button(
             "📥 PAS CSV ダウンロード",
             csv_p,
