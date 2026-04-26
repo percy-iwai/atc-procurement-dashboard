@@ -493,7 +493,6 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 orientation="h",
                 color="mega_category",
                 color_discrete_map=MEGA_COLORS,
-                category_orders={"mega_category": mega_df["mega_category"].tolist()},
                 labels={"mega_category": "大カテゴリ", "億円": "金額（億円）"},
                 template=TEMPLATE,
             )
@@ -501,7 +500,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 showlegend=False,
                 height=380,
                 margin=dict(l=8, r=8, t=8, b=8),
-                yaxis=dict(dtick=1),
+                yaxis=dict(categoryorder="total ascending", dtick=1),
             )
             fig_a.update_traces(hovertemplate="%{y}<br>%{x:,.1f}億円<extra></extra>")
             ev_a = st.plotly_chart(fig_a, use_container_width=True, on_select="rerun", key="chart_mega")
