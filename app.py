@@ -50,6 +50,12 @@ st.markdown("""
   }
   .stTabs [data-baseweb="tab"] {font-size: 0.9rem;}
   .block-container {padding-top: 1.5rem;}
+  div[data-testid="stDialog"] > div {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -173,7 +179,7 @@ if _HAS_DIALOG:
         cols = {k: v for k, v in _DRILLDOWN_COLS.items() if k in df.columns}
         disp = df[list(cols.keys())].head(max_rows).rename(columns=cols)
         st.subheader(title)
-        st.dataframe(disp, use_container_width=True, height=400)
+        st.dataframe(disp, use_container_width=True, height=600)
         st.write(f"**{len(df):,}件** / **{df['amount'].sum() / 1e8:.1f}億円**")
 else:
     def show_drilldown_dialog(df: pd.DataFrame, title: str, max_rows: int = 200):
@@ -963,8 +969,11 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
     st.plotly_chart(fig2, use_container_width=True)
 
     st.caption(
-        "※ FY2020は新型コロナ対策で歳出が6,623億円に急増（通常3,900〜4,200億円）。"
-        "調達母数は通常規模（2,152億）を維持。差分は空港・航空会社支援等の非調達経費。"
+        "※ FY2020（令和2年度）は新型コロナ対策補正予算により歳出が急増。"
+        "当初予算 3,836億円 → 補正後 6,623億円（差分 2,787億円が補正）。"
+        "補正分の主な内訳: 空港における感染症対策（サーモグラフィ・消毒設備等）、"
+        "航空会社支援（旅行需要急減対策）、那覇空港第二滑走路整備前倒し等。"
+        "これらは物品役務調達ではなく補助金・支援金が大半のため調達母数（2,152億）はほぼ不変。"
     )
     st.caption(
         "※ 予算は歳出予算額ベース、DB収録額は契約締結額ベース。"
@@ -1026,6 +1035,50 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             csv_p,
             file_name="pas_filtered.csv",
             mime="text/csv",
+        )
+
+    # ── 情報ソース一覧 ─────────────────────────────────────────
+    _all_bgt_src = load_all_years_budget()
+    show_source_links(_all_bgt_src)
+
+
+def show_source_links(all_years_budget: dict):
+    """情報ソース一覧 expander"""
+    with st.expander("情報ソース一覧", expanded=False):
+        st.markdown(
+            "<style>.source-links a { font-size: 0.82rem; }</style>",
+            unsafe_allow_html=True,
+        )
+        st.markdown("##### 適正化データ（契約実績）")
+        st.markdown(
+            "- **航空局本局**: [koku_tk1_000033.html](https://www.mlit.go.jp/koku/koku_tk1_000033.html)"
+            "　｜　WARP(H25-R3): [warp.ndl.go.jp](https://warp.ndl.go.jp/web/20241003183110/https://www.mlit.go.jp:8088/koku/koku_tk1_000033.html)\n"
+            "- **東京航空局(TCAB)**: [tcab/contract/](https://www.cab.mlit.go.jp/tcab/contract/)"
+            "　｜　WARP(H24-R2): [warp.ndl.go.jp](https://warp.ndl.go.jp/web/20201001151609/https://www.cab.mlit.go.jp/tcab/contract/contract_04/post_271.html)\n"
+            "- **大阪航空局(WCAB)**: [wcab/contract/published.html](https://www.cab.mlit.go.jp/wcab/contract/published.html)"
+            "　｜　WARP(H27-R4): [warp.ndl.go.jp](https://warp.ndl.go.jp/web/20230601134447/https://www.cab.mlit.go.jp/wcab/contract/published.html)\n"
+            "- **地方整備局PAS**: [pas.ysk.nilim.go.jp](https://www.pas.ysk.nilim.go.jp/)"
+        )
+
+        st.markdown("##### 予算概要（航空保安勘定 年度別PDF）")
+        bgt_lines = []
+        for fy_key in sorted(all_years_budget.keys()):
+            entry = all_years_budget[fy_key]
+            src = entry.get("source", "")
+            nen = entry.get("nen_go", "")
+            note = entry.get("note", "")
+            total = entry.get("budget_total", "")
+            if src:
+                label = f"{fy_key}（{nen}）{total}億 {note}"
+                bgt_lines.append(f"- [{label}]({src})")
+        st.markdown("\n".join(bgt_lines))
+
+        st.markdown("##### その他")
+        st.markdown(
+            "- [航空保安業務の概要（2025年版）](https://www.mlit.go.jp/koku/content/001743241.pdf)\n"
+            "- [GEPSポータル](https://www.p-portal.go.jp/)\n"
+            "- [行政事業レビューシステム](https://rssystem.go.jp/)\n"
+            "- [WARP（国立国会図書館ウェブアーカイブ）](https://warp.ndl.go.jp/)"
         )
 
 
