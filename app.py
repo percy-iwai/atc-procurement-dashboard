@@ -565,7 +565,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
     col_c, col_d = st.columns(2)
 
     with col_c:
-        st.markdown("#### システム名別 金額（contracts）")
+        st.markdown("#### システム名別 金額")
         sys_data = fc[fc["system_name"].notna()]
         if not sys_data.empty:
             sys_df = (
