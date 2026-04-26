@@ -153,7 +153,8 @@ def show_drilldown(df: pd.DataFrame, label: str, max_rows: int = 200):
     cols = {k: v for k, v in DESIRED_COLS.items() if k in df.columns}
     disp = df.sort_values("amount", ascending=False)[list(cols.keys())].head(max_rows).rename(columns=cols)
     st.markdown(f"**▼ {label} — {len(df):,} 件**（最大{max_rows}行表示）")
-    st.dataframe(disp, use_container_width=True, height=240)
+    st.dataframe(disp, use_container_width=True, height=240,
+                 column_config={"金額（円）": st.column_config.NumberColumn(format="%,.0f")})
 
 
 # ── モーダルダイアログ（Streamlit 1.35+） ────────────────────────────
@@ -184,8 +185,9 @@ if _HAS_DIALOG:
         cols = {k: v for k, v in _DRILLDOWN_COLS.items() if k in df.columns}
         disp = df.sort_values("amount", ascending=False)[list(cols.keys())].head(max_rows).rename(columns=cols)
         st.subheader(title)
-        st.dataframe(disp, use_container_width=True, height=600)
-        st.write(f"**{len(df):,}件** / **{df['amount'].sum() / 1e8:.1f}億円**")
+        st.dataframe(disp, use_container_width=True, height=600,
+                     column_config={"金額（円）": st.column_config.NumberColumn(format="%,.0f")})
+        st.write(f"**{len(df):,}件** / **{df['amount'].sum() / 1e8:,.1f}億円**")
 else:
     def show_drilldown_dialog(df: pd.DataFrame, title: str, max_rows: int = 200):
         show_drilldown(df, title, max_rows)
@@ -451,12 +453,12 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
     sub1.metric(
         "contracts",
         f"{len(fc):,} 件",
-        f"{fc['amount_oku'].sum():.0f} 億円",
+        f"{fc['amount_oku'].sum():,.0f} 億円",
     )
     sub2.metric(
         "PAS（地方整備局）",
         f"{len(fp):,} 件",
-        f"{fp['amount_oku'].sum():.0f} 億円",
+        f"{fp['amount_oku'].sum():,.0f} 億円",
     )
     c_rate = (
         (combined["bid_type"] == "随意契約").sum() / total_count * 100
@@ -496,6 +498,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 margin=dict(l=8, r=8, t=8, b=8),
                 yaxis=dict(dtick=1),
             )
+            fig_a.update_traces(hovertemplate="%{y}<br>%{x:,.1f}億円<extra></extra>")
             ev_a = st.plotly_chart(fig_a, use_container_width=True, on_select="rerun", key="chart_mega")
             if ev_a and ev_a.selection and ev_a.selection.points:
                 sel_mega = ev_a.selection.points[0].get("y")
@@ -530,7 +533,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 color_discrete_sequence=["#4472c4", "#70ad47"],
                 text="億円",
             )
-            fig_b.update_traces(texttemplate="%{text:.0f}", textposition="inside")
+            fig_b.update_traces(texttemplate="%{text:,.0f}", textposition="inside", hovertemplate="FY%{x}<br>%{y:,.1f}億円<extra></extra>")
             fig_b.update_layout(
                 height=380,
                 margin=dict(l=8, r=8, t=8, b=8),
@@ -583,6 +586,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 margin=dict(l=8, r=8, t=8, b=8),
                 yaxis=dict(dtick=1),
             )
+            fig_c.update_traces(hovertemplate="%{y}<br>%{x:,.1f}億円<extra></extra>")
             ev_c = st.plotly_chart(fig_c, use_container_width=True, on_select="rerun", key="chart_system")
             if ev_c and ev_c.selection and ev_c.selection.points:
                 sel_sys = ev_c.selection.points[0].get("y")
@@ -662,6 +666,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 margin=dict(l=8, r=8, t=8, b=8),
                 yaxis=dict(dtick=1),
             )
+            fig_d.update_traces(hovertemplate="%{y}<br>%{x:,.1f}億円<extra></extra>")
             ev_d = st.plotly_chart(fig_d, use_container_width=True, on_select="rerun", key="chart_vendor")
             if ev_d and ev_d.selection and ev_d.selection.points:
                 sel_display = ev_d.selection.points[0].get("y")
@@ -697,7 +702,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             )
             fig_e.update_traces(
                 textinfo="percent+label",
-                hovertemplate="%{label}<br>%{value:.1f}億円<br>%{percent}",
+                hovertemplate="%{label}<br>%{value:,.1f}億円<br>%{percent}",
             )
             fig_e.update_layout(
                 height=420,
@@ -734,6 +739,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                     name="件数",
                     marker_color="#4472c4",
                     opacity=0.8,
+                    hovertemplate="%{x}<br>%{y:,}件<extra></extra>",
                 ),
                 secondary_y=False,
             )
@@ -745,6 +751,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                     mode="lines+markers",
                     line=dict(color="#ffc000", width=2),
                     marker=dict(size=4),
+                    hovertemplate="%{x}<br>%{y:,.1f}億円<extra></extra>",
                 ),
                 secondary_y=True,
             )
@@ -795,6 +802,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             legend=dict(orientation="h", yanchor="bottom", y=1.01, font=dict(size=9)),
             xaxis=dict(type="category"),
         )
+        fig_mg_fy.update_traces(hovertemplate="FY%{x}<br>%{y:,.1f}億円<extra></extra>")
         ev_mg = st.plotly_chart(fig_mg_fy, use_container_width=True, on_select="rerun", key="chart_mega_fy")
         if ev_mg and ev_mg.selection and ev_mg.selection.points:
             pt = ev_mg.selection.points[0]
@@ -837,7 +845,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 labels={"work_type": "作業種別", "億円": "金額（億円）"},
                 template=TEMPLATE,
             )
-            fig_wt.update_traces(texttemplate="%{text}件", textposition="outside")
+            fig_wt.update_traces(texttemplate="%{text}件", textposition="outside", hovertemplate="%{x}<br>%{y:,.1f}億円<extra></extra>")
             fig_wt.update_layout(
                 showlegend=False, height=340,
                 margin=dict(l=8, r=8, t=8, b=8),
@@ -859,9 +867,9 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 x=heat.columns.tolist(),
                 y=heat.index.tolist(),
                 colorscale="Blues",
-                text=[[f"{v:.0f}億" for v in row] for row in heat.values],
+                text=[[f"{v:,.0f}億" for v in row] for row in heat.values],
                 texttemplate="%{text}",
-                hovertemplate="%{y} × %{x}<br>%{z:.1f}億円<extra></extra>",
+                hovertemplate="%{y} × %{x}<br>%{z:,.1f}億円<extra></extra>",
             ))
             fig_heat.update_layout(
                 template=TEMPLATE,
@@ -893,7 +901,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             labels={"organization": "組織", "億円": "金額（億円）"},
             template=TEMPLATE,
         )
-        fig_org.update_traces(texttemplate="%{text}件", textposition="outside")
+        fig_org.update_traces(texttemplate="%{text}件", textposition="outside", hovertemplate="%{x}<br>%{y:,.1f}億円<extra></extra>")
         fig_org.update_layout(
             coloraxis_showscale=False,
             height=380,
@@ -960,6 +968,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
         y=bgt_df2["調達母数"],
         marker_color="#4472c4",
         opacity=0.85,
+        hovertemplate="%{x}<br>調達母数: %{y:,.0f}億円<extra></extra>",
     ))
     fig2.add_trace(go.Bar(
         name="調達母数外（上段・薄色）",
@@ -967,6 +976,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
         y=bgt_df2["調達母数外"],
         marker_color="#b4c7e7",
         opacity=0.55,
+        hovertemplate="%{x}<br>調達母数外: %{y:,.0f}億円<extra></extra>",
     ))
     fig2.add_trace(go.Scatter(
         name="DB収録額（折れ線）",
@@ -975,9 +985,10 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
         mode="lines+markers+text",
         line=dict(color="#ffc000", width=2),
         marker=dict(size=7),
-        text=[f"{v:.0f}" for v in bgt_df2["DB収録額"]],
+        text=[f"{v:,.0f}" for v in bgt_df2["DB収録額"]],
         textposition="top center",
         textfont=dict(size=9),
+        hovertemplate="%{x}<br>DB収録額: %{y:,.1f}億円<extra></extra>",
     ))
     fig2.update_layout(
         template=TEMPLATE,
@@ -1028,7 +1039,8 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             "件名", "ベンダー（名寄せ）", "ベンダー（元）",
             "金額（円）", "契約日",
         ]
-        st.dataframe(show_c, use_container_width=True, height=320)
+        st.dataframe(show_c, use_container_width=True, height=320,
+                     column_config={"金額（円）": st.column_config.NumberColumn(format="%,.0f")})
         csv_c = show_c.to_csv(index=False, encoding="utf-8-sig")
         st.download_button(
             "📥 contracts CSV ダウンロード",
@@ -1050,7 +1062,8 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             "大カテゴリ", "カテゴリ", "エリア", "工種",
             "件名", "ベンダー（名寄せ）", "落札額（円）", "落札日",
         ]
-        st.dataframe(show_p, use_container_width=True, height=320)
+        st.dataframe(show_p, use_container_width=True, height=320,
+                     column_config={"落札額（円）": st.column_config.NumberColumn(format="%,.0f")})
         csv_p = show_p.to_csv(index=False, encoding="utf-8-sig")
         st.download_button(
             "📥 PAS CSV ダウンロード",
