@@ -1,9 +1,9 @@
 """
-航空管制調達DB インタラクティブダッシュボード
+国交省航空関連調達DB インタラクティブダッシュボード
 データソース: data/db/atc_procurement.db
-  - contracts テーブル (10,578件: 航空局本局XLSX + TCAB + WCAB)
-  - pas_airport_contracts テーブル (2,240件: 地方整備局PAS)
-対象期間: FY2020-2024（一部FY2019/2025含む）
+  - contracts テーブル (航空局本局XLSX + TCAB + WCAB)
+  - pas_airport_contracts テーブル (地方整備局PAS)
+対象期間: FY2013〜FY2025
 
 カラム:
   vendor_normalized : 法人番号ベース名寄せ後のベンダー名（ゴミはNULL）
@@ -26,7 +26,7 @@ import streamlit as st
 
 # ── ページ設定 ───────────────────────────────────────────────────
 st.set_page_config(
-    page_title="航空管制調達ダッシュボード",
+    page_title="国交省航空関連調達DB ダッシュボード",
     page_icon="✈️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -57,7 +57,30 @@ st.markdown("""
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "data" / "atc_procurement.db"
 BUDGET_PATH = BASE_DIR / "data" / "output" / "budget_vs_db_5yr.json"
+ALL_YEARS_BUDGET_PATH = BASE_DIR / "data" / "output" / "budget_all_years.json"
 TEMPLATE = "plotly_dark"
+
+# ── システム名 → PDFページ対応 ─────────────────────────────────
+PDF_BASE = "https://www.mlit.go.jp/koku/content/001743241.pdf"
+SYSTEM_PDF_PAGES = {
+    "TAPS": 56, "TEPS": 54, "TOPS": 60, "TEAM": 58, "FACE": 62,
+    "HARP": 63, "ICAP": 63,
+    "ILS": 42, "VOR/DME": 44, "ASR": 46, "ARSR": 48,
+    "MLAT": 50, "SSR": 46, "SBAS": 51, "GBAS": 51,
+    "NDB": 44, "RVA": 50,
+    "CPDLC": 60, "ADS-B": 50,
+    "PAPI": 52, "UPS": 66,
+    # 用語集（90頁以降）を参照して追加
+    "ATFM": 28,   # 航空交通流管理 — 専用節あり
+    "ATIS": 30,   # 飛行場情報放送業務 — 専用節あり
+    "SWIM": 73,   # 航空情報共有基盤 — 専用節あり
+    "MASS": 73,   # 航空交通情報交換処理システム（SWIM節内）
+    "RCAG": 48,   # 遠隔対空通信施設 — 항番46節相当
+    "MAPS": 34,   # 機械施設管理保全システム（FAIB節内）
+    "RISE": 34,   # 信頼性管理情報共有装置（FAIB節内）
+    "MISE": 38,   # 監視制御情報共有装置（SMC節内）
+    "SMC":  38,   # システム運用管理センター — 専用節あり
+}
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────
 def classify_bid(bm: str | None) -> str:
@@ -97,6 +120,66 @@ def fmt_man(v: float) -> str:
     return f"{v:,.0f} 万円"
 
 
+def show_drilldown(df: pd.DataFrame, label: str, max_rows: int = 200):
+    """クリックされた要素のドリルダウンテーブルを表示"""
+    if df.empty:
+        st.info(f"{label}: データなし")
+        return
+    DESIRED_COLS = {
+        "fiscal_year": "FY",
+        "bid_type": "入札方式",
+        "source_org": "ソース機関",
+        "organization": "組織",
+        "mega_category": "大カテゴリ",
+        "work_type": "作業種別",
+        "category": "カテゴリ",
+        "system_name": "システム",
+        "contract_name": "件名",
+        "vendor_normalized": "ベンダー",
+        "amount": "金額（円）",
+        "year_month": "年月",
+    }
+    cols = {k: v for k, v in DESIRED_COLS.items() if k in df.columns}
+    disp = df[list(cols.keys())].head(max_rows).rename(columns=cols)
+    st.markdown(f"**▼ {label} — {len(df):,} 件**（最大{max_rows}行表示）")
+    st.dataframe(disp, use_container_width=True, height=240)
+
+
+# ── モーダルダイアログ（Streamlit 1.35+） ────────────────────────────
+try:
+    _st_ver = tuple(int(x) for x in st.__version__.split(".")[:2])
+    _HAS_DIALOG = _st_ver >= (1, 35)
+except Exception:
+    _HAS_DIALOG = False
+
+_DRILLDOWN_COLS = {
+    "fiscal_year": "FY",
+    "bid_type": "入札方式",
+    "source_org": "ソース機関",
+    "organization": "組織",
+    "mega_category": "大カテゴリ",
+    "work_type": "作業種別",
+    "category": "カテゴリ",
+    "system_name": "システム",
+    "contract_name": "件名",
+    "vendor_normalized": "ベンダー",
+    "amount": "金額（円）",
+    "year_month": "年月",
+}
+
+if _HAS_DIALOG:
+    @st.dialog("ドリルダウン", width="large")
+    def show_drilldown_dialog(df: pd.DataFrame, title: str, max_rows: int = 200):
+        cols = {k: v for k, v in _DRILLDOWN_COLS.items() if k in df.columns}
+        disp = df[list(cols.keys())].head(max_rows).rename(columns=cols)
+        st.subheader(title)
+        st.dataframe(disp, use_container_width=True, height=400)
+        st.write(f"**{len(df):,}件** / **{df['amount'].sum() / 1e8:.1f}億円**")
+else:
+    def show_drilldown_dialog(df: pd.DataFrame, title: str, max_rows: int = 200):
+        show_drilldown(df, title, max_rows)
+
+
 # ── データ読み込み（キャッシュ付き） ────────────────────────────────
 @st.cache_data
 def load_contracts() -> pd.DataFrame:
@@ -109,7 +192,6 @@ def load_contracts() -> pd.DataFrame:
     df["amount_oku"] = df["contract_amount"].fillna(0) / 1e8
     df["fiscal_year"] = df["fiscal_year"].astype("Int64")
 
-    # vendor_normalized フォールバック（カラムがない旧DBでも動く）
     if "vendor_normalized" not in df.columns:
         df["vendor_normalized"] = df["vendor_name"]
     if "mega_category" not in df.columns:
@@ -117,7 +199,6 @@ def load_contracts() -> pd.DataFrame:
     if "work_type" not in df.columns:
         df["work_type"] = "その他"
 
-    # 月次パース
     df["year_month"] = (
         pd.to_datetime(df["contract_date"], format="%Y%m%d", errors="coerce")
         .dt.to_period("M")
@@ -158,6 +239,12 @@ def load_budget() -> dict:
         return json.load(f)
 
 
+@st.cache_data
+def load_all_years_budget() -> dict:
+    with open(ALL_YEARS_BUDGET_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def make_combined(fc: pd.DataFrame, fp: pd.DataFrame) -> pd.DataFrame:
     """contracts と PAS を共通スキーマで結合"""
     c = fc.assign(
@@ -184,65 +271,77 @@ def make_combined(fc: pd.DataFrame, fp: pd.DataFrame) -> pd.DataFrame:
 
 # ── メイン ──────────────────────────────────────────────────────
 def main():
-    # タイトル
-    st.markdown(
-        "## ✈️ 航空管制調達DB ダッシュボード",
-        unsafe_allow_html=False,
-    )
-    st.caption(
-        "国土交通省 航空局・地方整備局 | FY2020–2024 | "
-        "contracts (10,578件) + PAS (2,240件)"
-    )
+    # 変更1: タイトル変更
+    st.markdown("## ✈️ 国交省航空関連調達DB ダッシュボード")
+
+    # 変更2: データソース説明（折りたたみ、デフォルト閉じ）
+    with st.expander("データソース・注記", expanded=False):
+        st.markdown("""
+**データソース:**
+- [航空局本局](https://www.mlit.go.jp/koku/koku_tk1_000033.html)
+- [東京航空局](https://www.cab.mlit.go.jp/tcab/contract/)
+- [大阪航空局](https://www.cab.mlit.go.jp/wcab/contract/published.html)
+- [地方整備局PAS](https://www.pas.ysk.nilim.go.jp/)
+
+**期間:** FY2013〜FY2025（過去分は[WARP（国立国会図書館）](https://warp.ndl.go.jp/)で収集）
+FY2019の地方整備局データはアーカイブ欠落のため未収録。
+**カテゴリ分類:** [航空保安業務の概要（2025）](https://www.mlit.go.jp/koku/content/001743241.pdf)を参照。
+""")
 
     # データ読み込み
     df_c = load_contracts()
     df_p = load_pas()
     budget = load_budget()
 
+    # ── 大カテゴリ定数（サイドバーと本体で共用） ───────────────
+    MEGA_COLORS = {
+        "管制システム":   "#4472c4",
+        "無線・レーダー": "#9e2a2b",
+        "通信設備":       "#5e8c61",
+        "灯火・標識":     "#ffc000",
+        "電源・電気設備": "#ed7d31",
+        "土木・建築":     "#70ad47",
+        "航空機・検査":   "#8e44ad",
+        "一般物品・庁費": "#7f7f7f",
+    }
+    MEGA_ORDER = [
+        "管制システム", "無線・レーダー", "通信設備", "灯火・標識",
+        "電源・電気設備", "土木・建築", "航空機・検査", "一般物品・庁費",
+    ]
+
     # ── サイドバー ──────────────────────────────────────────────
     with st.sidebar:
         st.header("🔍 フィルタ")
 
-        # 会計年度
         all_fy = sorted(
             set(df_c["fiscal_year"].dropna().astype(int).tolist())
             | set(df_p["fiscal_year"].dropna().astype(int).tolist())
         )
         sel_fy = st.multiselect("会計年度 (FY)", all_fy, default=all_fy)
 
-        # 大カテゴリ (mega_category) — モノの種類ベース
-        MEGA_ORDER = [
-            "管制システム", "無線・レーダー", "通信設備", "灯火・標識",
-            "電源・電気設備", "土木・建築", "航空機・検査", "一般物品・庁費",
-        ]
         all_megas = [m for m in MEGA_ORDER if m in (
             set(df_c["mega_category"].dropna()) | set(df_p["mega_category"].dropna())
         )]
         sel_megas = st.multiselect("大カテゴリ（モノの種類）", all_megas, default=all_megas)
 
-        # 作業種別 (work_type)
         WORK_TYPE_ORDER = ["製造・納入", "工事・設置", "保守・運用", "設計・調査", "その他"]
         all_wts = [w for w in WORK_TYPE_ORDER if w in set(df_c["work_type"].dropna())]
         sel_wts = st.multiselect("作業種別（work_type）", all_wts, default=all_wts)
 
-        # カテゴリ
         all_cats = sorted(
             (set(df_c["category"].dropna()) | set(df_p["category"].dropna()))
             - {"不明"}
         ) + ["不明"]
         sel_cats = st.multiselect("カテゴリ（詳細）", all_cats, default=all_cats)
 
-        # エリアタイプ
         all_areas = sorted(
             set(df_c["area_type"].dropna()) | set(df_p["area_type"].dropna())
         )
         sel_areas = st.multiselect("エリアタイプ", all_areas, default=all_areas)
 
-        # システム名（contracts）
         all_systems = sorted(df_c["system_name"].dropna().unique())
         sel_systems = st.multiselect("システム名", all_systems, default=all_systems)
 
-        # 組織（contracts）
         all_orgs = sorted(df_c["organization"].dropna().unique())
         sel_orgs = st.multiselect(
             "組織（contracts）",
@@ -251,7 +350,6 @@ def main():
             help="航空局本局・TCAB・WCAB の組織名",
         )
 
-        # 地整局（PAS）
         all_bureaux = sorted(df_p["bureau"].dropna().unique())
         sel_bureaux = st.multiselect(
             "地方整備局（PAS）",
@@ -259,11 +357,9 @@ def main():
             default=all_bureaux,
         )
 
-        # 入札方式
         bid_options = ["一般競争", "随意契約", "企画競争", "指名競争", "その他"]
         sel_bids = st.multiselect("入札方式", bid_options, default=bid_options)
 
-        # 金額レンジ（億円）
         max_oku = float(
             max(
                 df_c["amount_oku"].max() if len(df_c) > 0 else 0,
@@ -320,7 +416,6 @@ def main():
         (fp["amount_oku"] >= amount_range[0]) & (fp["amount_oku"] <= amount_range[1])
     ]
 
-    # データソース選択
     if data_src == "contracts のみ":
         fp = fp.iloc[0:0]
     elif data_src == "PAS のみ":
@@ -361,35 +456,43 @@ def main():
 
     st.divider()
 
-    # ── Row 1: カテゴリ別 + FY トレンド ───────────────────────
+    # ── Row 1: 大カテゴリ別金額（変更3） + FY トレンド ──────────
     col_a, col_b = st.columns(2)
 
     with col_a:
-        st.markdown("#### カテゴリ別 金額（横棒）")
+        st.markdown("#### 大カテゴリ別 金額（横棒）")
         if not combined.empty:
-            cat_df = (
-                combined.groupby("category")["amount"]
+            mega_df = (
+                combined.groupby("mega_category")["amount"]
                 .sum()
                 .reset_index()
             )
-            cat_df["億円"] = cat_df["amount"] / 1e8
-            cat_df = cat_df.sort_values("億円", ascending=True).tail(20)
-            fig = px.bar(
-                cat_df,
+            mega_df["億円"] = mega_df["amount"] / 1e8
+            mega_df = mega_df.sort_values("億円", ascending=True)
+            fig_a = px.bar(
+                mega_df,
                 x="億円",
-                y="category",
+                y="mega_category",
                 orientation="h",
-                color="億円",
-                color_continuous_scale="Blues_r",
-                labels={"category": "カテゴリ", "億円": "金額（億円）"},
+                color="mega_category",
+                color_discrete_map=MEGA_COLORS,
+                labels={"mega_category": "大カテゴリ", "億円": "金額（億円）"},
                 template=TEMPLATE,
             )
-            fig.update_layout(
-                coloraxis_showscale=False,
-                height=480,
+            fig_a.update_layout(
+                showlegend=False,
+                height=380,
                 margin=dict(l=8, r=8, t=8, b=8),
+                yaxis=dict(dtick=1),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            ev_a = st.plotly_chart(fig_a, use_container_width=True, on_select="rerun", key="chart_mega")
+            if ev_a and ev_a.selection and ev_a.selection.points:
+                sel_mega = ev_a.selection.points[0].get("y")
+                if sel_mega:
+                    show_drilldown_dialog(
+                        combined[combined["mega_category"] == sel_mega],
+                        f"大カテゴリ: {sel_mega}",
+                    )
         else:
             st.info("データなし")
 
@@ -405,7 +508,7 @@ def main():
             fy_df["ソース"] = fy_df["source_type"].map(
                 {"contracts": "本局+TCAB+WCAB", "pas": "地方整備局(PAS)"}
             )
-            fig = px.bar(
+            fig_b = px.bar(
                 fy_df,
                 x="fiscal_year",
                 y="億円",
@@ -416,18 +519,29 @@ def main():
                 color_discrete_sequence=["#4472c4", "#70ad47"],
                 text="億円",
             )
-            fig.update_traces(texttemplate="%{text:.0f}", textposition="inside")
-            fig.update_layout(
-                height=480,
+            fig_b.update_traces(texttemplate="%{text:.0f}", textposition="inside")
+            fig_b.update_layout(
+                height=380,
                 margin=dict(l=8, r=8, t=8, b=8),
                 legend=dict(orientation="h", yanchor="bottom", y=1.01),
                 xaxis=dict(type="category"),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            ev_b = st.plotly_chart(fig_b, use_container_width=True, on_select="rerun", key="chart_fy")
+            if ev_b and ev_b.selection and ev_b.selection.points:
+                sel_fy_val = ev_b.selection.points[0].get("x")
+                if sel_fy_val is not None:
+                    try:
+                        sel_fy_int = int(str(sel_fy_val))
+                        show_drilldown_dialog(
+                            combined[combined["fiscal_year"] == sel_fy_int],
+                            f"FY{sel_fy_int}",
+                        )
+                    except (ValueError, TypeError):
+                        pass
         else:
             st.info("データなし")
 
-    # ── Row 2: システム名 + ベンダー上位 ───────────────────────
+    # ── Row 2: システム名（変更4・5） + ベンダー上位 ─────────────
     col_c, col_d = st.columns(2)
 
     with col_c:
@@ -441,7 +555,7 @@ def main():
             )
             sys_df["億円"] = sys_df["contract_amount"] / 1e8
             sys_df = sys_df.sort_values("億円", ascending=True)
-            fig = px.bar(
+            fig_c = px.bar(
                 sys_df,
                 x="億円",
                 y="system_name",
@@ -451,12 +565,44 @@ def main():
                 labels={"system_name": "システム", "億円": "金額（億円）"},
                 template=TEMPLATE,
             )
-            fig.update_layout(
+            # 変更4: 全ラベル強制表示
+            fig_c.update_layout(
                 coloraxis_showscale=False,
-                height=420,
+                height=480,
                 margin=dict(l=8, r=8, t=8, b=8),
+                yaxis=dict(dtick=1),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            ev_c = st.plotly_chart(fig_c, use_container_width=True, on_select="rerun", key="chart_system")
+            if ev_c and ev_c.selection and ev_c.selection.points:
+                sel_sys = ev_c.selection.points[0].get("y")
+                if sel_sys:
+                    show_drilldown_dialog(
+                        combined[combined["system_name"] == sel_sys],
+                        f"システム: {sel_sys}",
+                    )
+
+            # 変更5: システム名 → PDF参照ページリンクテーブル
+            existing_systems = sorted(sys_data["system_name"].unique())
+            pdf_rows = []
+            for sname in existing_systems:
+                page = SYSTEM_PDF_PAGES.get(sname)
+                pdf_rows.append({
+                    "システム名": sname,
+                    "PDFページ": page if page else "—",
+                    "PDF参照": f"{PDF_BASE}#page={page}&view=Fit" if page else "",
+                })
+            if pdf_rows:
+                pdf_df = pd.DataFrame(pdf_rows)
+                st.caption("▼ 航空保安業務の概要 PDF 参照ページ")
+                st.dataframe(
+                    pdf_df,
+                    use_container_width=True,
+                    height=min(38 * len(pdf_rows) + 38, 280),
+                    column_config={
+                        "PDF参照": st.column_config.LinkColumn("開く", display_text="開く"),
+                    },
+                    hide_index=True,
+                )
         else:
             st.info("システム名データなし")
 
@@ -472,7 +618,7 @@ def main():
             v_df["億円"] = v_df["amount"] / 1e8
             v_df = v_df.sort_values("億円", ascending=True).tail(20)
             v_df["表示名"] = v_df["vendor_normalized"].str[:22]
-            fig = px.bar(
+            fig_d = px.bar(
                 v_df,
                 x="億円",
                 y="表示名",
@@ -482,12 +628,22 @@ def main():
                 labels={"表示名": "ベンダー", "億円": "金額（億円）"},
                 template=TEMPLATE,
             )
-            fig.update_layout(
+            fig_d.update_layout(
                 coloraxis_showscale=False,
                 height=520,
                 margin=dict(l=8, r=8, t=8, b=8),
+                yaxis=dict(dtick=1),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            ev_d = st.plotly_chart(fig_d, use_container_width=True, on_select="rerun", key="chart_vendor")
+            if ev_d and ev_d.selection and ev_d.selection.points:
+                sel_display = ev_d.selection.points[0].get("y")
+                if sel_display:
+                    matched = v_df[v_df["表示名"] == sel_display]["vendor_normalized"].values
+                    if len(matched) > 0:
+                        show_drilldown_dialog(
+                            combined[combined["vendor_normalized"] == matched[0]],
+                            f"ベンダー: {matched[0]}",
+                        )
         else:
             st.info("データなし")
 
@@ -503,7 +659,7 @@ def main():
                 .reset_index()
             )
             org_df["億円"] = org_df["amount"] / 1e8
-            fig = px.pie(
+            fig_e = px.pie(
                 org_df,
                 values="億円",
                 names="source_org",
@@ -511,17 +667,24 @@ def main():
                 template=TEMPLATE,
                 color_discrete_sequence=px.colors.qualitative.Set2,
             )
-            fig.update_traces(
+            fig_e.update_traces(
                 textinfo="percent+label",
                 hovertemplate="%{label}<br>%{value:.1f}億円<br>%{percent}",
             )
-            fig.update_layout(
+            fig_e.update_layout(
                 height=420,
                 margin=dict(l=8, r=8, t=30, b=8),
                 showlegend=True,
                 legend=dict(orientation="v", x=1.0, y=0.5),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            ev_e = st.plotly_chart(fig_e, use_container_width=True, on_select="rerun", key="chart_org_pie")
+            if ev_e and ev_e.selection and ev_e.selection.points:
+                sel_org = ev_e.selection.points[0].get("label")
+                if sel_org:
+                    show_drilldown_dialog(
+                        combined[combined["source_org"] == sel_org],
+                        f"組織: {sel_org}",
+                    )
         else:
             st.info("データなし")
 
@@ -535,8 +698,8 @@ def main():
                 .reset_index()
                 .sort_values("year_month")
             )
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
-            fig.add_trace(
+            fig_f = make_subplots(specs=[[{"secondary_y": True}]])
+            fig_f.add_trace(
                 go.Bar(
                     x=m_df["year_month"],
                     y=m_df["件数"],
@@ -546,7 +709,7 @@ def main():
                 ),
                 secondary_y=False,
             )
-            fig.add_trace(
+            fig_f.add_trace(
                 go.Scatter(
                     x=m_df["year_month"],
                     y=m_df["合計億円"],
@@ -557,93 +720,64 @@ def main():
                 ),
                 secondary_y=True,
             )
-            fig.update_layout(
+            fig_f.update_layout(
                 template=TEMPLATE,
                 height=420,
                 margin=dict(l=8, r=8, t=8, b=8),
                 legend=dict(orientation="h", yanchor="bottom", y=1.01),
                 xaxis=dict(tickangle=-45),
             )
-            fig.update_yaxes(title_text="件数", secondary_y=False)
-            fig.update_yaxes(title_text="金額（億円）", secondary_y=True)
-            st.plotly_chart(fig, use_container_width=True)
+            fig_f.update_yaxes(title_text="件数", secondary_y=False)
+            fig_f.update_yaxes(title_text="金額（億円）", secondary_y=True)
+            ev_f = st.plotly_chart(fig_f, use_container_width=True, on_select="rerun", key="chart_monthly")
+            if ev_f and ev_f.selection and ev_f.selection.points:
+                sel_month = ev_f.selection.points[0].get("x")
+                if sel_month:
+                    show_drilldown_dialog(
+                        combined[combined["year_month"] == str(sel_month)],
+                        f"月: {sel_month}",
+                    )
         else:
             st.info("日付データなし")
 
-    # ── 大カテゴリ（mega_category）グラフ ──────────────────────
-    st.markdown("#### 大カテゴリ別 金額・件数（モノの種類）")
+    # ── 大カテゴリ FY推移（積み上げ） ──────────────────────────
+    st.markdown("#### 大カテゴリ別 FY推移（積み上げ棒）")
     if not combined.empty:
-        MEGA_COLORS = {
-            "管制システム":   "#4472c4",
-            "無線・レーダー": "#9e2a2b",
-            "通信設備":       "#5e8c61",
-            "灯火・標識":     "#ffc000",
-            "電源・電気設備": "#ed7d31",
-            "土木・建築":     "#70ad47",
-            "航空機・検査":   "#8e44ad",
-            "一般物品・庁費": "#7f7f7f",
-        }
-        MEGA_ORDER = [
-            "管制システム", "無線・レーダー", "通信設備", "灯火・標識",
-            "電源・電気設備", "土木・建築", "航空機・検査", "一般物品・庁費",
-        ]
-        mg_col1, mg_col2 = st.columns(2)
-
-        with mg_col1:
-            mg_df = (
-                combined.groupby("mega_category")
-                .agg(億円=("amount", lambda x: x.sum() / 1e8), 件数=("amount", "count"))
-                .reset_index()
-                .sort_values("億円", ascending=False)
-            )
-            fig_mg = px.bar(
-                mg_df,
-                x="mega_category",
-                y="億円",
-                color="mega_category",
-                color_discrete_map=MEGA_COLORS,
-                category_orders={"mega_category": MEGA_ORDER},
-                text="件数",
-                labels={"mega_category": "大カテゴリ", "億円": "金額（億円）"},
-                template=TEMPLATE,
-            )
-            fig_mg.update_traces(texttemplate="%{text}件", textposition="outside")
-            fig_mg.update_layout(
-                showlegend=False,
-                height=380,
-                margin=dict(l=8, r=8, t=8, b=8),
-                xaxis=dict(tickangle=-25),
-            )
-            st.plotly_chart(fig_mg, use_container_width=True)
-
-        with mg_col2:
-            # FY × mega_category の積み上げ
-            mg_fy = (
-                combined.groupby(["fiscal_year", "mega_category"])["amount"]
-                .sum()
-                .reset_index()
-            )
-            mg_fy["億円"] = mg_fy["amount"] / 1e8
-            fig_fy = px.bar(
-                mg_fy,
-                x="fiscal_year",
-                y="億円",
-                color="mega_category",
-                color_discrete_map=MEGA_COLORS,
-                category_orders={"mega_category": MEGA_ORDER},
-                barmode="stack",
-                labels={"fiscal_year": "会計年度", "億円": "金額（億円）",
-                        "mega_category": "大カテゴリ"},
-                template=TEMPLATE,
-            )
-            fig_fy.update_layout(
-                height=380,
-                margin=dict(l=8, r=8, t=8, b=8),
-                legend=dict(orientation="h", yanchor="bottom", y=1.01,
-                            font=dict(size=9)),
-                xaxis=dict(type="category"),
-            )
-            st.plotly_chart(fig_fy, use_container_width=True)
+        mg_fy = (
+            combined.groupby(["fiscal_year", "mega_category"])["amount"]
+            .sum()
+            .reset_index()
+        )
+        mg_fy["億円"] = mg_fy["amount"] / 1e8
+        fig_mg_fy = px.bar(
+            mg_fy,
+            x="fiscal_year",
+            y="億円",
+            color="mega_category",
+            color_discrete_map=MEGA_COLORS,
+            category_orders={"mega_category": MEGA_ORDER},
+            barmode="stack",
+            labels={"fiscal_year": "会計年度", "億円": "金額（億円）",
+                    "mega_category": "大カテゴリ"},
+            template=TEMPLATE,
+        )
+        fig_mg_fy.update_layout(
+            height=380,
+            margin=dict(l=8, r=8, t=8, b=8),
+            legend=dict(orientation="h", yanchor="bottom", y=1.01, font=dict(size=9)),
+            xaxis=dict(type="category"),
+        )
+        ev_mg = st.plotly_chart(fig_mg_fy, use_container_width=True, on_select="rerun", key="chart_mega_fy")
+        if ev_mg and ev_mg.selection and ev_mg.selection.points:
+            pt = ev_mg.selection.points[0]
+            sel_fy_mg = pt.get("x")
+            if sel_fy_mg is not None:
+                try:
+                    sel_fy_int_mg = int(str(sel_fy_mg))
+                    filtered_mg = combined[combined["fiscal_year"] == sel_fy_int_mg]
+                    show_drilldown_dialog(filtered_mg, f"FY{sel_fy_int_mg}")
+                except (ValueError, TypeError):
+                    pass
 
     # ── work_type グラフ ────────────────────────────────────────
     st.markdown("#### 作業種別（work_type）× 大カテゴリ — contracts")
@@ -683,7 +817,6 @@ def main():
             st.plotly_chart(fig_wt, use_container_width=True)
 
         with wt_col2:
-            # mega × work_type ヒートマップ
             heat = (
                 fc.groupby(["mega_category", "work_type"])["amount_oku"]
                 .sum()
@@ -691,7 +824,7 @@ def main():
                 .pivot(index="mega_category", columns="work_type", values="amount_oku")
                 .fillna(0)
                 .reindex(columns=WORK_ORDER, fill_value=0)
-                .reindex(MEGA_ORDER[::-1], fill_value=0)  # 上から大→小
+                .reindex(MEGA_ORDER[::-1], fill_value=0)
             )
             fig_heat = go.Figure(go.Heatmap(
                 z=heat.values,
@@ -722,7 +855,7 @@ def main():
             .sort_values("億円", ascending=False)
             .head(20)
         )
-        fig = px.bar(
+        fig_org = px.bar(
             org_bar,
             x="organization",
             y="億円",
@@ -732,82 +865,116 @@ def main():
             labels={"organization": "組織", "億円": "金額（億円）"},
             template=TEMPLATE,
         )
-        fig.update_traces(
-            texttemplate="%{text}件",
-            textposition="outside",
-        )
-        fig.update_layout(
+        fig_org.update_traces(texttemplate="%{text}件", textposition="outside")
+        fig_org.update_layout(
             coloraxis_showscale=False,
             height=380,
             margin=dict(l=8, r=8, t=8, b=8),
             xaxis=dict(tickangle=-30),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        ev_org = st.plotly_chart(fig_org, use_container_width=True, on_select="rerun", key="chart_org_bar")
+        if ev_org and ev_org.selection and ev_org.selection.points:
+            sel_org_name = ev_org.selection.points[0].get("x")
+            if sel_org_name:
+                show_drilldown_dialog(
+                    combined[combined["organization"] == sel_org_name],
+                    f"組織: {sel_org_name}",
+                )
 
-    # ── 予算比較（5年トレンド） ─────────────────────────────────
-    st.markdown("#### 📈 予算比較 — 調達母数 vs DB収録額（5年トレンド）")
-    bgt_rows = []
-    for fy_key in sorted(budget["fiscal_years"].keys()):
-        d = budget["fiscal_years"][fy_key]
-        bgt_rows.append(
-            {
-                "FY": int(fy_key),
-                "調達母数（億円）": d["budget"]["procurement_base_oku"],
-                "DB収録額（億円）": d["db"]["combined_oku"],
-                "網羅率(%)": d["coverage"]["coverage_pct"],
-            }
-        )
-    bgt_df = pd.DataFrame(bgt_rows)
+    # ── 予算比較（FY2013-2025 全期間トレンド） ────────────────────
+    st.markdown("#### 📈 予算比較 — 調達母数 vs DB収録額（FY2013〜2025 全期間）")
+    st.caption(
+        "調達母数 = 予算歳出合計 − 人件費（推定） − 借入金償還 − "
+        "非調達的経費（市町村交付金・土地借料・ICAO分担金等）"
+    )
 
-    fig2 = make_subplots(specs=[[{"secondary_y": True}]])
-    fig2.add_trace(
-        go.Bar(
-            name="調達母数",
-            x=bgt_df["FY"],
-            y=bgt_df["調達母数（億円）"],
-            marker_color="#4472c4",
-            opacity=0.7,
-        ),
-        secondary_y=False,
-    )
-    fig2.add_trace(
-        go.Bar(
-            name="DB収録額",
-            x=bgt_df["FY"],
-            y=bgt_df["DB収録額（億円）"],
-            marker_color="#70ad47",
-            opacity=0.9,
-        ),
-        secondary_y=False,
-    )
-    fig2.add_trace(
-        go.Scatter(
-            name="網羅率(%)",
-            x=bgt_df["FY"],
-            y=bgt_df["網羅率(%)"],
-            mode="lines+markers+text",
-            line=dict(color="#ffc000", width=2),
-            text=[f"{v:.1f}%" for v in bgt_df["網羅率(%)"]],
-            textposition="top center",
-        ),
-        secondary_y=True,
-    )
+    # FY別調達母数（確定値 / 推計値）
+    # 確定値: budget_vs_db_5yr.json (FY2020-2024)
+    # 推計値: 人件費800〜830億 + 借入金償還300〜400億 + 非調達的経費600〜700億 ≈ 1700〜1800億控除
+    _PROC_BASE_OKU = {
+        2013: 1527, 2014: 1906, 2015: 1945, 2016: 2095,
+        2017: 2141, 2018: 2459, 2019: 2538,
+        2020: 2152, 2021: 2146, 2022: 2137, 2023: 2147, 2024: 2407,
+        2025: 2253,
+    }
+    _PROC_BASE_CONFIRMED = {2020, 2021, 2022, 2023, 2024}
+
+    _all_bgt = load_all_years_budget()
+
+    # DB実績：全データ（フィルタ適用前）から FY別集計
+    _c_fy = df_c.groupby("fiscal_year")["contract_amount"].sum() / 1e8
+    _p_fy = df_p.groupby("fiscal_year")["award_amount"].sum() / 1e8
+    _db_fy = _c_fy.add(_p_fy, fill_value=0)
+
+    bgt_rows2 = []
+    for fy in range(2013, 2026):
+        fy_key = f"FY{fy}"
+        bgt_total = _all_bgt.get(fy_key, {}).get("budget_total", None)
+        if bgt_total is None:
+            continue
+        proc_base = _PROC_BASE_OKU.get(fy, max(bgt_total - 1750, 0))
+        non_proc = max(bgt_total - proc_base, 0)
+        db_oku = float(_db_fy.get(fy, 0))
+        confirmed = fy in _PROC_BASE_CONFIRMED
+        bgt_rows2.append({
+            "FY": fy,
+            "調達母数": proc_base,
+            "調達母数外": non_proc,
+            "DB収録額": db_oku,
+            "確定": confirmed,
+        })
+    bgt_df2 = pd.DataFrame(bgt_rows2)
+
+    fig2 = go.Figure()
+    fig2.add_trace(go.Bar(
+        name="調達母数（下段・濃色）",
+        x=bgt_df2["FY"],
+        y=bgt_df2["調達母数"],
+        marker_color="#4472c4",
+        opacity=0.85,
+    ))
+    fig2.add_trace(go.Bar(
+        name="調達母数外（上段・薄色）",
+        x=bgt_df2["FY"],
+        y=bgt_df2["調達母数外"],
+        marker_color="#b4c7e7",
+        opacity=0.55,
+    ))
+    fig2.add_trace(go.Scatter(
+        name="DB収録額（折れ線）",
+        x=bgt_df2["FY"],
+        y=bgt_df2["DB収録額"],
+        mode="lines+markers+text",
+        line=dict(color="#ffc000", width=2),
+        marker=dict(size=7),
+        text=[f"{v:.0f}" for v in bgt_df2["DB収録額"]],
+        textposition="top center",
+        textfont=dict(size=9),
+    ))
     fig2.update_layout(
         template=TEMPLATE,
-        barmode="group",
-        height=420,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        barmode="stack",
+        height=460,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, font=dict(size=10)),
         margin=dict(l=8, r=8, t=8, b=8),
-        xaxis=dict(type="category"),
-    )
-    fig2.update_yaxes(title_text="金額（億円）", secondary_y=False)
-    fig2.update_yaxes(
-        title_text="網羅率（%）",
-        secondary_y=True,
-        range=[0, 170],
-        ticksuffix="%",
+        xaxis=dict(type="category", title="会計年度"),
+        yaxis=dict(title="金額（億円）"),
     )
     st.plotly_chart(fig2, use_container_width=True)
+
+    st.caption(
+        "※ FY2020は新型コロナ対策で歳出が6,623億円に急増（通常3,900〜4,200億円）。"
+        "調達母数は通常規模（2,152億）を維持。差分は空港・航空会社支援等の非調達経費。"
+    )
+    st.caption(
+        "※ 予算は歳出予算額ベース、DB収録額は契約締結額ベース。"
+        "多年度契約を含むため直接比較はオーダー感の把握用。"
+    )
+    st.caption(
+        "※ FY2013〜2019・FY2025の調達母数は推計値"
+        "（人件費800〜830億・借入金償還300〜400億・非調達的経費600〜700億を控除）。"
+        "FY2020〜2024は確定値。"
+    )
 
     # ── データテーブル ──────────────────────────────────────────
     st.markdown("#### 📋 フィルタ済みデータ一覧")

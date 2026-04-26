@@ -1,0 +1,18 @@
+{
+  "FY2011": {"budget_total": 3264, "nen_go": "H23", "source": "https://www.mlit.go.jp/common/000133656.pdf", "note": "当初予算"},
+  "FY2012": {"budget_total": 3181, "nen_go": "H24", "source": "https://www.mlit.go.jp/common/000188610.pdf", "note": "当初予算"},
+  "FY2013": {"budget_total": 3277, "nen_go": "H25", "source": "https://www.mlit.go.jp/common/000989107.pdf", "note": "当初予算"},
+  "FY2014": {"budget_total": 3656, "nen_go": "H26", "source": "https://www.mlit.go.jp/common/001024965.pdf", "note": "当初予算"},
+  "FY2015": {"budget_total": 3695, "nen_go": "H27", "source": "https://www.mlit.go.jp/common/001067344.pdf", "note": "当初予算"},
+  "FY2016": {"budget_total": 3845, "nen_go": "H28", "source": "https://www.mlit.go.jp/common/001116621.pdf", "note": "当初予算"},
+  "FY2017": {"budget_total": 3891, "nen_go": "H29", "source": "https://www.mlit.go.jp/common/001159187.pdf", "note": "当初予算"},
+  "FY2018": {"budget_total": 4209, "nen_go": "H30", "source": "https://www.mlit.go.jp/common/001218123.pdf", "note": "当初予算"},
+  "FY2019": {"budget_total": 4288, "nen_go": "R1/H31", "source": "https://www.mlit.go.jp/common/001270675.pdf", "note": "当初予算"},
+  "FY2020": {"budget_total": 6623, "nen_go": "R2", "source": "https://www.mlit.go.jp/page/content/001324450.pdf", "note": "当初予算（COVID-19対策による大幅増）"},
+  "FY2021": {"budget_total": 3919, "nen_go": "R3", "source": "https://www.mlit.go.jp/page/content/001383001.pdf", "note": "当初予算"},
+  "FY2022": {"budget_total": 3896, "nen_go": "R4", "source": "https://www.mlit.go.jp/page/content/001460111.pdf", "note": "当初予算"},
+  "FY2023": {"budget_total": 3942, "nen_go": "R5", "source": "https://www.mlit.go.jp/page/content/001583485.pdf", "note": "当初予算"},
+  "FY2024": {"budget_total": 3959, "nen_go": "R6", "source": "https://www.mlit.go.jp/page/content/001720601.pdf", "note": "当初予算"},
+  "FY2025": {"budget_total": 3903, "nen_go": "R7", "source": "https://www.mlit.go.jp/page/content/001858395.pdf", "note": "当初予算"},
+  "FY2026": {"budget_total": 4250, "nen_go": "R8", "source": "https://www.mlit.go.jp/page/content/001982277.pdf", "note": "当初予算"}
+}
