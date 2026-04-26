@@ -151,7 +151,7 @@ def show_drilldown(df: pd.DataFrame, label: str, max_rows: int = 200):
         "year_month": "年月",
     }
     cols = {k: v for k, v in DESIRED_COLS.items() if k in df.columns}
-    disp = df[list(cols.keys())].head(max_rows).rename(columns=cols)
+    disp = df.sort_values("amount", ascending=False)[list(cols.keys())].head(max_rows).rename(columns=cols)
     st.markdown(f"**▼ {label} — {len(df):,} 件**（最大{max_rows}行表示）")
     st.dataframe(disp, use_container_width=True, height=240)
 
@@ -182,7 +182,7 @@ if _HAS_DIALOG:
     @st.dialog("ドリルダウン", width="large")
     def show_drilldown_dialog(df: pd.DataFrame, title: str, max_rows: int = 200):
         cols = {k: v for k, v in _DRILLDOWN_COLS.items() if k in df.columns}
-        disp = df[list(cols.keys())].head(max_rows).rename(columns=cols)
+        disp = df.sort_values("amount", ascending=False)[list(cols.keys())].head(max_rows).rename(columns=cols)
         st.subheader(title)
         st.dataframe(disp, use_container_width=True, height=600)
         st.write(f"**{len(df):,}件** / **{df['amount'].sum() / 1e8:.1f}億円**")
