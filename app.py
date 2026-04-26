@@ -493,6 +493,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                 orientation="h",
                 color="mega_category",
                 color_discrete_map=MEGA_COLORS,
+                category_orders={"mega_category": mega_df["mega_category"].tolist()},
                 labels={"mega_category": "大カテゴリ", "億円": "金額（億円）"},
                 template=TEMPLATE,
             )
