@@ -66,32 +66,28 @@ BUDGET_PATH = BASE_DIR / "data" / "output" / "budget_vs_db_5yr.json"
 ALL_YEARS_BUDGET_PATH = BASE_DIR / "data" / "output" / "budget_all_years.json"
 TEMPLATE = "plotly_dark"
 
-# ── システム名 → PDFページ対応 ─────────────────────────────────
-PDF_BASE = "https://www.mlit.go.jp/koku/content/001743241.pdf"
-SYSTEM_PDF_PAGES = {
-    "TAPS": 56, "TEPS": 54, "TOPS": 60, "TEAM": 58, "FACE": 62,
-    "HARP": 63, "ICAP": 63,
-    "ILS": 42, "VOR/DME": 44, "ASR": 46, "ARSR": 48,
-    "MLAT": 50, "SSR": 46, "SBAS": 51, "GBAS": 51,
-    "NDB": 44, "RVA": 50,
-    "CPDLC": 60, "ADS-B": 50,
-    "PAPI": 52, "UPS": 66,
-    # 用語集（90頁以降）を参照して追加
-    "ATFM": 28,   # 航空交通流管理 — 専用節あり
-    "ATIS": 30,   # 飛行場情報放送業務 — 専用節あり
-    "SWIM": 73,   # 航空情報共有基盤 — 専用節あり
-    "MASS": 73,   # 航空交通情報交換処理システム（SWIM節内）
-    "RCAG": 48,   # 遠隔対空通信施設 — 항番46節相当
-    "MAPS": 34,   # 機械施設管理保全システム（FAIB節内）
-    "RISE": 34,   # 信頼性管理情報共有装置（FAIB節内）
-    "MISE": 38,   # 監視制御情報共有装置（SMC節内）
-    "SMC":  38,   # システム運用管理センター — 専用節あり
-    # DB実績あり・PDF掲載確認済み
-    "ADEX": 60,   # 管制データ交換処理システム（TOPS節内 p.60）
-    "VOR":  45,   # VOR/DMEページ（p.45）
-    "DME":  45,   # VOR/DMEページ（p.45）
-    "DLCS": 90,   # データリンク中央処理装置（用語集 p.90）
-    # CCS / CRMS / ARTS / FDPS はこのPDFに記載なし
+# ── システム名 → 参照先対応 ─────────────────────────────────────
+PDF_BASE  = "https://www.mlit.go.jp/koku/content/001743241.pdf"
+CIDAI_BASE = "https://www.mlit.go.jp/koku/cidai/"
+
+# ("PDF", page) → 航空保安業務の概要PDF
+# ("URL", url)  → 外部サイト（CIDAI等）
+SYSTEM_REFERENCES: dict[str, tuple[str, int | str]] = {
+    "TAPS": ("PDF", 56), "TEPS": ("PDF", 54), "TOPS": ("PDF", 60), "TEAM": ("PDF", 58), "FACE": ("PDF", 62),
+    "HARP": ("PDF", 63), "ICAP": ("PDF", 63),
+    "ILS": ("PDF", 42), "VOR/DME": ("PDF", 44), "ASR": ("PDF", 46), "ARSR": ("PDF", 48),
+    "MLAT": ("PDF", 50), "SSR": ("PDF", 46), "SBAS": ("PDF", 51), "GBAS": ("PDF", 51),
+    "NDB": ("PDF", 44), "RVA": ("PDF", 50),
+    "CPDLC": ("PDF", 60), "ADS-B": ("PDF", 50),
+    "PAPI": ("PDF", 52), "UPS": ("PDF", 66),
+    "ATFM": ("PDF", 28), "ATIS": ("PDF", 30), "SWIM": ("PDF", 73), "MASS": ("PDF", 73),
+    "RCAG": ("PDF", 48), "MAPS": ("PDF", 34), "RISE": ("PDF", 34), "MISE": ("PDF", 38), "SMC": ("PDF", 38),
+    "ADEX": ("PDF", 60), "VOR": ("PDF", 45), "DME": ("PDF", 45), "DLCS": ("PDF", 90),
+    # CIDAI（日本の空港技術ショーケース）掲載システム — PDFに記載なし
+    "CCS":  ("URL", f"{CIDAI_BASE}#No_3-23"),  # 通信制御装置
+    "TRCS": ("URL", f"{CIDAI_BASE}#No_3-4"),   # 非常用ターミナルレーダー管制装置（ARTS/VCCS言及あり）
+    "ACTS": ("URL", f"{CIDAI_BASE}#No_2-5"),   # 飛行場管制訓練システム
+    "EVA":  ("URL", f"{CIDAI_BASE}#No_3-5"),   # 非常用管制塔システム
 }
 
 # ── ヘルパー関数 ──────────────────────────────────────────────────
@@ -593,25 +589,42 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
                         f"システム: {sel_sys}",
                     )
 
-            # 変更5: システム名 → PDF参照ページリンクテーブル
+            # 変更5: システム名 → 参照先リンクテーブル（PDF or CIDAI）
             existing_systems = sorted(sys_data["system_name"].unique())
-            pdf_rows = []
+            ref_rows = []
             for sname in existing_systems:
-                page = SYSTEM_PDF_PAGES.get(sname)
-                pdf_rows.append({
-                    "システム名": sname,
-                    "PDFページ": page if page else "—",
-                    "PDF参照": f"{PDF_BASE}#page={page}&view=Fit" if page else "",
-                })
-            if pdf_rows:
-                pdf_df = pd.DataFrame(pdf_rows)
-                st.caption("▼ 航空保安業務の概要 PDF 参照ページ")
+                ref = SYSTEM_REFERENCES.get(sname)
+                if ref and ref[0] == "PDF":
+                    page = ref[1]
+                    ref_rows.append({
+                        "システム名": sname,
+                        "参照先": "PDF",
+                        "ページ": str(page),
+                        "開く": f"{PDF_BASE}#page={page}&view=Fit",
+                    })
+                elif ref and ref[0] == "URL":
+                    ref_rows.append({
+                        "システム名": sname,
+                        "参照先": "CIDAI",
+                        "ページ": "—",
+                        "開く": ref[1],
+                    })
+                else:
+                    ref_rows.append({
+                        "システム名": sname,
+                        "参照先": "—",
+                        "ページ": "—",
+                        "開く": "",
+                    })
+            if ref_rows:
+                ref_df = pd.DataFrame(ref_rows)
+                st.caption("▼ システム参照先（航空保安業務の概要PDF / CIDAIサイト）")
                 st.dataframe(
-                    pdf_df,
+                    ref_df,
                     use_container_width=True,
-                    height=min(38 * len(pdf_rows) + 38, 280),
+                    height=min(38 * len(ref_rows) + 38, 280),
                     column_config={
-                        "PDF参照": st.column_config.LinkColumn("開く", display_text="開く"),
+                        "開く": st.column_config.LinkColumn("開く", display_text="開く"),
                     },
                     hide_index=True,
                 )
