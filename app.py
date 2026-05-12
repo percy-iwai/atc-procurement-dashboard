@@ -14,6 +14,7 @@
                       製造・納入 / 工事・設置 / 保守・運用 / 設計・調査 / その他
 """
 
+import io
 import json
 import sqlite3
 from pathlib import Path
@@ -1050,12 +1051,23 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
         show_c_disp = show_c.copy()
         show_c_disp["金額（円）"] = show_c_disp["金額（円）"].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
         st.dataframe(show_c_disp, use_container_width=True, height=320)
-        st.download_button(
-            "📥 contracts CSV ダウンロード",
-            csv_c,
-            file_name="contracts_filtered.csv",
-            mime="text/csv",
-        )
+        _buf_c = io.BytesIO()
+        show_c.to_excel(_buf_c, index=False, engine="openpyxl")
+        _col_csv_c, _col_xlsx_c = st.columns(2)
+        with _col_csv_c:
+            st.download_button(
+                "📥 contracts CSV ダウンロード",
+                csv_c,
+                file_name="contracts_filtered.csv",
+                mime="text/csv",
+            )
+        with _col_xlsx_c:
+            st.download_button(
+                "📊 contracts xlsx ダウンロード",
+                _buf_c.getvalue(),
+                file_name="contracts_filtered.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
 
     with tab2:
         show_p = fp[
@@ -1074,12 +1086,23 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
         show_p_disp = show_p.copy()
         show_p_disp["落札額（円）"] = show_p_disp["落札額（円）"].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
         st.dataframe(show_p_disp, use_container_width=True, height=320)
-        st.download_button(
-            "📥 PAS CSV ダウンロード",
-            csv_p,
-            file_name="pas_filtered.csv",
-            mime="text/csv",
-        )
+        _buf_p = io.BytesIO()
+        show_p.to_excel(_buf_p, index=False, engine="openpyxl")
+        _col_csv_p, _col_xlsx_p = st.columns(2)
+        with _col_csv_p:
+            st.download_button(
+                "📥 PAS CSV ダウンロード",
+                csv_p,
+                file_name="pas_filtered.csv",
+                mime="text/csv",
+            )
+        with _col_xlsx_p:
+            st.download_button(
+                "📊 PAS xlsx ダウンロード",
+                _buf_p.getvalue(),
+                file_name="pas_filtered.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
 
     # ── 情報ソース一覧 ─────────────────────────────────────────
     _all_bgt_src = load_all_years_budget()
