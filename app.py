@@ -399,6 +399,20 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
             index=0,
         )
 
+        st.divider()
+        st.caption("🗂️ 引っ越しキット")
+        _kit = Path(__file__).parent.parent / "atc_dashboard_kit_20260613.zip"
+        if _kit.exists():
+            st.download_button(
+                label="📦 ATC kit をダウンロード",
+                data=_kit.read_bytes(),
+                file_name="atc_dashboard_kit_20260613.zip",
+                mime="application/zip",
+                help="ATCダッシュボード・DB・パイプライン一式",
+            )
+        else:
+            st.info("ローカル環境でのみ\nダウンロード可能です", icon="💻")
+
     # ── フィルタ適用 ───────────────────────────────────────────
     fc = df_c.copy()
     fp = df_p.copy()
