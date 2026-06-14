@@ -401,7 +401,7 @@ FY2019の地方整備局データはアーカイブ欠落のため未収録。
 
         st.divider()
         st.caption("🗂️ 引っ越しキット")
-        _kit = Path(__file__).parent.parent / "atc_dashboard_kit_20260613.zip"
+        _kit = Path(__file__).parent / "atc_dashboard_kit_20260613.zip"
         if _kit.exists():
             st.download_button(
                 label="📦 ATC kit をダウンロード",
